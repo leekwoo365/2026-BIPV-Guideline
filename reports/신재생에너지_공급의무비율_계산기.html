@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>신·재생에너지 공급의무비율 계산기</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --ink:#15181d; --muted:#666e7a; --line:#e2e5ea;
+    --accent:#1668c1; --accent-weak:#eaf2fb; --ok:#0f7b46; --ok-weak:#e7f5ee;
+    --bad:#b4232a; --bad-weak:#fdecec; --input:#f0f7ee; --input-line:#7fb069;
+    --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 14px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#14161a; --panel:#1c1f25; --ink:#e8eaee; --muted:#9aa3af; --line:#2e333b;
+      --accent:#5aa2e8; --accent-weak:#1b2c3f; --ok:#4ec98a; --ok-weak:#152a20;
+      --bad:#f0838a; --bad-weak:#2e1a1c; --input:#1e2a1f; --input-line:#4a7a3a;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.2);
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:24px 16px 64px; background:var(--bg); color:var(--ink);
+    font-family:"Pretendard","Malgun Gothic","맑은 고딕",system-ui,-apple-system,sans-serif;
+    font-size:14px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1120px; margin:0 auto}
+  header{margin-bottom:20px}
+  h1{font-size:22px; margin:0 0 6px; letter-spacing:-.02em}
+  .sub{color:var(--muted); font-size:12.5px; margin:0}
+  .sub b{color:var(--accent); font-weight:600}
+
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:18px; margin-bottom:16px; box-shadow:var(--shadow)}
+  .panel > h2{font-size:13px; margin:0 0 14px; letter-spacing:.02em; color:var(--muted);
+    text-transform:uppercase; font-weight:700; display:flex; align-items:center; gap:8px}
+  .panel > h2::before{content:""; width:3px; height:13px; background:var(--accent); border-radius:2px}
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px}
+  label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:600}
+  input,select{width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:7px;
+    background:var(--panel); color:var(--ink); font-size:14px; font-family:inherit}
+  input:focus,select:focus{outline:2px solid var(--accent); outline-offset:-1px; border-color:transparent}
+  input[type=number]{background:var(--input); border-color:var(--input-line); font-variant-numeric:tabular-nums}
+
+  .formula{background:var(--accent-weak); border-radius:7px; padding:12px 14px; font-size:12.5px;
+    color:var(--muted); margin-top:14px; line-height:1.8}
+  .formula code{color:var(--ink); font-weight:600; font-family:inherit}
+  .eq{font-variant-numeric:tabular-nums}
+
+  .big{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-top:12px}
+  .big .n{font-size:28px; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+  .big .u{color:var(--muted); font-size:13px}
+
+  .scroll{overflow-x:auto; margin:0 -18px; padding:0 18px}
+  table{width:100%; border-collapse:collapse; font-size:13px; min-width:900px}
+  th,td{padding:9px 8px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap}
+  th{font-size:11px; color:var(--muted); font-weight:700; text-align:right; letter-spacing:.02em}
+  th:first-child,td:first-child{text-align:left}
+  td.num{font-variant-numeric:tabular-nums}
+  tbody tr:hover{background:var(--accent-weak)}
+  tfoot td{border-top:2px solid var(--line); border-bottom:none; font-weight:700; padding-top:11px}
+  .muted{color:var(--muted)}
+  td select{min-width:180px; padding:6px 8px; font-size:13px}
+  td input{width:88px; padding:6px 8px; font-size:13px; text-align:right}
+
+  button{font-family:inherit; font-size:13px; padding:7px 13px; border-radius:7px;
+    border:1px solid var(--line); background:var(--panel); color:var(--ink); cursor:pointer; font-weight:600}
+  button:hover{border-color:var(--accent); color:var(--accent)}
+  .btn-primary{background:var(--accent); color:#fff; border-color:var(--accent)}
+  .btn-primary:hover{opacity:.88; color:#fff}
+  .btn-x{padding:4px 9px; color:var(--muted); font-weight:400; border-color:transparent}
+  .btn-x:hover{color:var(--bad); border-color:var(--bad)}
+  .actions{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap}
+
+  .verdict{border-radius:10px; padding:18px; display:flex; align-items:center;
+    justify-content:space-between; gap:18px; flex-wrap:wrap}
+  .verdict.pass{background:var(--ok-weak); border:1px solid var(--ok)}
+  .verdict.fail{background:var(--bad-weak); border:1px solid var(--bad)}
+  .verdict .lbl{font-size:12px; color:var(--muted); font-weight:600; margin-bottom:3px}
+  .verdict .val{font-size:30px; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+  .verdict.pass .val{color:var(--ok)} .verdict.fail .val{color:var(--bad)}
+  .verdict .msg{font-size:13px; font-weight:600}
+  .verdict.pass .msg{color:var(--ok)} .verdict.fail .msg{color:var(--bad)}
+  .bar{height:8px; background:var(--line); border-radius:4px; overflow:hidden; margin-top:12px}
+  .bar > i{display:block; height:100%; border-radius:4px; transition:width .3s ease}
+  .bar > i.pass{background:var(--ok)} .bar > i.fail{background:var(--bad)}
+
+  details{margin-top:16px; font-size:12.5px; color:var(--muted)}
+  summary{cursor:pointer; font-weight:600; color:var(--accent); padding:4px 0}
+  details ul{margin:8px 0 0; padding-left:18px; line-height:1.8}
+  details li{margin-bottom:3px}
+  .note{font-size:11.5px; color:var(--muted); margin-top:10px; line-height:1.7}
+  .home{display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    font-size:13px; font-weight:600; color:var(--muted); background:var(--panel);
+    border:1px solid var(--line); border-radius:7px; padding:7px 12px; margin-bottom:16px;
+    box-shadow:var(--shadow); transition:color .15s ease, border-color .15s ease, transform .15s ease}
+  .home:hover{color:var(--accent); border-color:var(--accent)}
+  .home .arrow{transition:transform .15s ease}
+  .home:hover .arrow{transform:translateX(-3px)}
+  @media (max-width:640px){ body{padding:16px 10px 48px} h1{font-size:19px} .panel{padding:14px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<a class="home" href="index.html"><span class="arrow">←</span> 홈으로</a>
+
+<header>
+  <h1>신·재생에너지 공급의무비율 계산기</h1>
+  <p class="sub">신에너지 및 재생에너지 개발·이용·보급 촉진법 · <b>신·재생에너지 설비의 지원 등에 관한 규정</b>(기후에너지환경부고시 제2026-61호, 2025.12.24. 시행)</p>
+</header>
+
+<!-- 1. 설계조건 -->
+<section class="panel">
+  <h2>1. 설계조건 입력</h2>
+  <div class="grid">
+    <div>
+      <label for="area">건물 연면적 (㎡)</label>
+      <input type="number" id="area" value="46027.92" min="0" step="0.01">
+    </div>
+    <div>
+      <label for="use">건축물 용도</label>
+      <select id="use"></select>
+    </div>
+    <div>
+      <label for="region">건축물 지역</label>
+      <select id="region"></select>
+    </div>
+    <div>
+      <label for="year">적용 연도 (의무비율)</label>
+      <select id="year"></select>
+    </div>
+  </div>
+  <p class="note" id="scopeNote"></p>
+</section>
+
+<!-- 2. 예상 에너지사용량 -->
+<section class="panel">
+  <h2>2. 예상 에너지사용량</h2>
+  <div class="formula">
+    예상 에너지사용량 = <code>건축 연면적</code> × <code>단위 에너지사용량</code> × <code>용도별 보정계수</code> × <code>지역계수</code>
+    <br><span class="eq" id="eqLine"></span>
+  </div>
+  <div class="big">
+    <span class="n" id="euseVal">–</span><span class="u">kWh/yr</span>
+  </div>
+  <p class="note">※ 용도별 보정계수는 2017.04 이후 삭제되어 <b>1.0</b>으로 일괄 적용합니다.</p>
+</section>
+
+<!-- 3. 원별 설치계획 -->
+<section class="panel">
+  <h2>3. 신·재생에너지원별 설치계획</h2>
+  <div class="formula">
+    신·재생에너지 생산량 = <code>원별 설치규모</code> × <code>단위 에너지생산량</code> × <code>원별 보정계수</code>
+    <br>→ 설치비율(%)을 입력하면 필요한 <code>설치규모</code>를 역산합니다.
+  </div>
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>신·재생에너지원</th>
+          <th>설치비율 (%)</th>
+          <th>생산량 (kWh/yr)</th>
+          <th>설치규모</th>
+          <th>단위</th>
+          <th>설치면적 (㎡)</th>
+          <th>설치비용 (원)</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+      <tfoot>
+        <tr>
+          <td>합계</td>
+          <td class="num" id="sumRatio">0.0</td>
+          <td class="num" id="sumGen">0</td>
+          <td colspan="2"></td>
+          <td class="num" id="sumArea">0</td>
+          <td class="num" id="sumCost">0</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <div class="actions">
+    <button id="addBtn" class="btn-primary">+ 에너지원 추가</button>
+    <button id="resetBtn">초기화</button>
+  </div>
+</section>
+
+<!-- 4. 판정 -->
+<section class="panel">
+  <h2>4. 공급의무비율 판정</h2>
+  <div class="formula">
+    공급의무비율(%) = <code>신·재생에너지 생산량</code> ÷ <code>예상 에너지사용량</code> × 100
+  </div>
+  <div class="verdict" id="verdict" style="margin-top:14px">
+    <div>
+      <div class="lbl">산정 공급비율</div>
+      <div class="val" id="ratioVal">0.0%</div>
+    </div>
+    <div>
+      <div class="lbl">의무비율</div>
+      <div class="val" id="targetVal">–</div>
+    </div>
+    <div style="flex:1; min-width:200px">
+      <div class="msg" id="verdictMsg"></div>
+      <div class="bar"><i id="barFill"></i></div>
+    </div>
+  </div>
+
+  <details>
+    <summary>산정 기준 데이터 및 주의사항</summary>
+    <ul>
+      <li><b>연도별 의무비율</b> — 24~25년 34% / 26~27년 36% / 28~29년 38% / 30년 이후 40%</li>
+      <li><b>적용 대상</b> — 신축·증축·개축하는 <b>연면적 1,000㎡ 이상</b>의 공공기관 소유 건축물</li>
+      <li><b>제외 용도</b> — 주거용 및 기타(창고시설, 위험물저장 및 처리시설), 발전시설 등</li>
+      <li><b>태양광 보정계수</b> — 2022.08.17 개정분 반영 (고정식 0.95 / 추적식 1.47 / BIPV 6.12)</li>
+      <li><b>설치비용</b> — 법정 수치가 아닌 <b>업체 조사·공고 기준의 참고 단가</b>입니다. 실제 견적과 다를 수 있습니다.</li>
+      <li><b>설치면적</b> — 원별 단위규모당 소요면적 환산치이며, 관리동선 여유율은 미포함입니다.</li>
+      <li>서울시는 별도 보정계수를 사용하므로 별도 확인이 필요합니다.</li>
+    </ul>
+  </details>
+</section>
+
+<p class="note" style="text-align:center">
+  출처: <b>공급의무 비율(%) 산정 방법 (신·재생에너지 설비의 지원 등에 관한 규정).xlsx</b> · <b>인증, 법규 기준.pdf</b> (p.1) — 2026 BIPV 가이드라인
+</p>
+
+</div>
+
+<script>
+"use strict";
+
+/* ---------- 기준 데이터 (엑셀 '개정 후' 시트) ---------- */
+
+// 단위 에너지사용량(kWh/㎡·yr) — 용도별 보정계수는 2017.04 이후 전부 1.0
+const USES = [
+  {g:"공공용",     n:"교정 및 군사시설",   e:392.07},
+  {g:"공공용",     n:"방송통신시설",       e:490.18},
+  {g:"공공용",     n:"공공 업무시설",      e:371.66},
+  {g:"문교·사회용", n:"문화 및 집회시설",   e:412.03},
+  {g:"문교·사회용", n:"종교시설",          e:257.49},
+  {g:"문교·사회용", n:"의료시설",          e:643.52},
+  {g:"문교·사회용", n:"교육연구시설",       e:231.33},
+  {g:"문교·사회용", n:"노유자시설",        e:175.58},
+  {g:"문교·사회용", n:"수련시설",          e:231.33},
+  {g:"문교·사회용", n:"운동시설",          e:235.42},
+  {g:"문교·사회용", n:"묘지관련시설",       e:234.99},
+  {g:"문교·사회용", n:"관광휴게시설",       e:437.08},
+  {g:"문교·사회용", n:"장례식장",          e:234.99},
+  {g:"상업용",     n:"판매 및 영업시설",   e:408.45},
+  {g:"상업용",     n:"운수시설",          e:374.47},
+  {g:"상업용",     n:"상업 업무시설",      e:374.47},
+  {g:"상업용",     n:"숙박시설",          e:526.55},
+  {g:"상업용",     n:"위락시설",          e:400.33},
+  {g:"상업용",     n:"공동주택",          e:230},
+];
+
+const REGIONS = [
+  {n:"서울",r:1},{n:"인천",r:0.97},{n:"경기",r:0.99},{n:"강원 영서, 춘천",r:1},
+  {n:"강원 영동, 강릉",r:0.97},{n:"대전",r:1},{n:"충북",r:1},{n:"전북",r:1.04},
+  {n:"충남, 세종",r:0.99},{n:"광주",r:1.01},{n:"대구",r:1.04},{n:"부산",r:0.93},
+  {n:"경남",r:1},{n:"울산",r:0.93},{n:"경북",r:0.98},{n:"전남",r:0.99},{n:"제주",r:0.97},
+];
+
+// gen: 단위 에너지생산량, k: 원별 보정계수, u: 규모 단위,
+// cost: 설치단가(천원/단위, 0=자료없음), area: 단위규모당 설치면적(㎡, null=자료없음)
+const SOURCES = [
+  {g:"태양광",   n:"태양광 - 고정식",       gen:1358, gu:"kWh/kW·yr", k:0.95, u:"kW", cost:2700,   area:6},
+  {g:"태양광",   n:"태양광 - 추적식",       gen:1765, gu:"kWh/kW·yr", k:1.47, u:"kW", cost:5604,   area:6},
+  {g:"태양광",   n:"태양광 - BIPV",        gen:923,  gu:"kWh/kW·yr", k:6.12, u:"kW", cost:7500,   area:10},
+  {g:"태양열",   n:"태양열 - 평판형",       gen:596,  gu:"kWh/㎡·yr", k:1.78, u:"㎡", cost:375,    area:3},
+  {g:"태양열",   n:"태양열 - 단일진공관형",  gen:745,  gu:"kWh/㎡·yr", k:1.42, u:"㎡", cost:1160,   area:null},
+  {g:"태양열",   n:"태양열 - 이중진공관형",  gen:745,  gu:"kWh/㎡·yr", k:1.42, u:"㎡", cost:1012,   area:null},
+  {g:"태양열",   n:"태양열 - 공기식무창형",  gen:487,  gu:"kWh/㎡·yr", k:1.53, u:"㎡", cost:0,      area:null},
+  {g:"태양열",   n:"태양열 - 공기식유창형",  gen:557,  gu:"kWh/㎡·yr", k:2.87, u:"㎡", cost:0,      area:null},
+  {g:"지열",     n:"지열 - 수직밀폐형",     gen:864,  gu:"kWh/kW·yr", k:1.26, u:"kW", cost:1700,   area:2.369929453262787},
+  {g:"지열",     n:"지열 - 개방형",        gen:864,  gu:"kWh/kW·yr", k:1,    u:"kW", cost:1700,   area:1.1375661375661374},
+  {g:"집광채광", n:"집광채광 - 프리즘",      gen:132,  gu:"kWh/㎡·yr", k:7.76, u:"㎡", cost:8496,   area:0.72},
+  {g:"집광채광", n:"집광채광 - 광덕트",      gen:73,   gu:"kWh/㎡·yr", k:7.77, u:"㎡", cost:4536,   area:1.92},
+  {g:"집광채광", n:"집광채광 - 실내루버형",  gen:184,  gu:"kWh/㎡·yr", k:2.77, u:"㎡", cost:450,    area:1.15},
+  {g:"연료전지", n:"연료전지 - PEMFC",      gen:7415, gu:"kWh/kW·yr", k:2.2,  u:"kW", cost:35000,  area:0.5175},
+  {g:"연료전지", n:"연료전지 - SOFC",       gen:9198, gu:"kWh/kW·yr", k:8.71, u:"kW", cost:100000, area:0.5175},
+  {g:"수열에너지",n:"수열에너지 - 해수",     gen:864,  gu:"kWh/kW·yr", k:1.3,  u:"kW", cost:1450,   area:0.0108},
+  {g:"수열에너지",n:"수열에너지 - 하천수",   gen:864,  gu:"kWh/kW·yr", k:1.3,  u:"kW", cost:1450,   area:0.0108},
+  {g:"목재펠릿", n:"목재펠릿",              gen:322,  gu:"kWh/kg·yr", k:0.32, u:"kg", cost:0,      area:null},
+  {g:"소형풍력", n:"소형풍력",              gen:2375, gu:"kWh/kW·yr", k:4.5,  u:"kW", cost:0,      area:null},
+];
+
+// 연도별 공급의무비율 (인증, 법규 기준.pdf p.1)
+const YEARS = [
+  {n:"2024 ~ 2025년", t:34},
+  {n:"2026 ~ 2027년", t:36},
+  {n:"2028 ~ 2029년", t:38},
+  {n:"2030년 이후",   t:40},
+];
+
+const USE_CORR = 1;   // 용도별 보정계수 (2017.04 이후 1로 일괄적용)
+const DEFAULT_ROWS = [{src:"태양광 - BIPV", ratio:8.3},{src:"지열 - 개방형", ratio:8.4}];
+
+/* ---------- 유틸 ---------- */
+const $ = id => document.getElementById(id);
+const fmt = (v,d=0) => (!isFinite(v)?"–":v.toLocaleString("ko-KR",{minimumFractionDigits:d,maximumFractionDigits:d}));
+const won = v => {                       // 원 → 억/만원 축약
+  if(!isFinite(v)||v<=0) return "–";
+  if(v>=1e8) return fmt(v/1e8,2)+" 억원";
+  if(v>=1e4) return fmt(v/1e4,0)+" 만원";
+  return fmt(v,0)+" 원";
+};
+const groupOpts = (arr,label,val) => {
+  const gs=[...new Set(arr.map(x=>x.g))];
+  return gs.map(g=>`<optgroup label="${g}">`+
+    arr.filter(x=>x.g===g).map(x=>`<option value="${val(x)}">${label(x)}</option>`).join("")+
+    `</optgroup>`).join("");
+};
+
+/* ---------- 셀렉트 초기화 ---------- */
+$("use").innerHTML    = groupOpts(USES, x=>`${x.n} (${x.e} kWh/㎡·yr)`, x=>x.n);
+$("region").innerHTML = REGIONS.map(x=>`<option value="${x.n}">${x.n} (${x.r})</option>`).join("");
+$("year").innerHTML   = YEARS.map((x,i)=>`<option value="${i}">${x.n} — 의무 ${x.t}%</option>`).join("");
+$("use").value = "공동주택";
+$("region").value = "서울";
+$("year").value = "1";                   // 2026~2027 (36%)
+
+const srcOptions = groupOpts(SOURCES, x=>x.n, x=>x.n);
+
+/* ---------- 행 관리 ---------- */
+function addRow(src, ratio){
+  const tr = document.createElement("tr");
+  tr.innerHTML =
+    `<td><select class="src">${srcOptions}</select></td>`+
+    `<td><input class="ratio" type="number" min="0" step="0.1" value="${ratio??0}"></td>`+
+    `<td class="num c-gen">–</td><td class="num c-size">–</td><td class="muted c-unit">–</td>`+
+    `<td class="num c-area">–</td><td class="num c-cost">–</td>`+
+    `<td><button class="btn-x" title="삭제">✕</button></td>`;
+  if(src) tr.querySelector(".src").value = src;
+  tr.querySelector("button").onclick = () => { tr.remove(); calc(); };
+  $("rows").appendChild(tr);
+}
+function reset(){
+  $("rows").innerHTML = "";
+  DEFAULT_ROWS.forEach(r=>addRow(r.src, r.ratio));
+  calc();
+}
+
+/* ---------- 계산 ---------- */
+function calc(){
+  const area   = parseFloat($("area").value) || 0;
+  const use    = USES.find(x=>x.n===$("use").value);
+  const region = REGIONS.find(x=>x.n===$("region").value);
+  const target = YEARS[+$("year").value].t;
+
+  // 예상 에너지사용량 = 연면적 × 단위에너지사용량 × 용도별보정계수 × 지역계수
+  const euse = area * use.e * USE_CORR * region.r;
+
+  $("eqLine").textContent =
+    `= ${fmt(area,1)}㎡ × ${use.e} kWh/㎡·yr × ${USE_CORR.toFixed(1)} × ${region.r} = ${fmt(euse,0)} kWh/yr`;
+  $("euseVal").textContent = fmt(euse,0);
+
+  let sumRatio=0, sumGen=0, sumArea=0, sumCost=0, areaKnown=true, costKnown=true;
+
+  [...$("rows").children].forEach(tr=>{
+    const s = SOURCES.find(x=>x.n===tr.querySelector(".src").value);
+    const r = parseFloat(tr.querySelector(".ratio").value) || 0;
+
+    const gen  = euse * (r/100);           // 해당 원이 담당할 생산량
+    const size = gen / (s.gen * s.k);      // 설치규모 = 생산량 ÷ (단위생산량 × 보정계수)
+    const a    = s.area!=null ? size*s.area : null;
+    const c    = s.cost>0     ? size*s.cost*1000 : null;   // 단가 천원 → 원
+
+    tr.querySelector(".c-gen").textContent  = fmt(gen,0);
+    tr.querySelector(".c-size").textContent = fmt(size,2);
+    tr.querySelector(".c-unit").textContent = s.u;
+    tr.querySelector(".c-area").textContent = a!=null ? fmt(a,1) : "–";
+    tr.querySelector(".c-cost").textContent = c!=null ? won(c) : "–";
+
+    sumRatio+=r; sumGen+=gen;
+    if(a!=null) sumArea+=a; else if(r>0) areaKnown=false;
+    if(c!=null) sumCost+=c; else if(r>0) costKnown=false;
+  });
+
+  $("sumRatio").textContent = fmt(sumRatio,1);
+  $("sumGen").textContent   = fmt(sumGen,0);
+  $("sumArea").textContent  = fmt(sumArea,1) + (areaKnown?"":" +");
+  $("sumCost").textContent  = won(sumCost)  + (costKnown?"":" +");
+
+  // 공급의무비율 = 생산량 ÷ 예상에너지사용량 × 100
+  const ratio = euse>0 ? sumGen/euse*100 : 0;
+  const pass  = ratio >= target - 1e-9;
+
+  $("ratioVal").textContent  = fmt(ratio,2)+"%";
+  $("targetVal").textContent = target+"%";
+  $("verdict").className = "verdict " + (pass?"pass":"fail");
+  $("verdictMsg").textContent = pass
+    ? `의무비율 충족 (+${fmt(ratio-target,2)}%p)`
+    : `의무비율 미달 (${fmt(target-ratio,2)}%p 부족)`;
+  const fill = $("barFill");
+  fill.style.width = Math.min(100, target>0 ? ratio/target*100 : 0)+"%";
+  fill.className = pass?"pass":"fail";
+
+  $("scopeNote").textContent = area>0 && area<1000
+    ? "⚠ 연면적 1,000㎡ 미만 — 신·재생에너지 공급의무 대상이 아닙니다 (신축·증축·개축 1,000㎡ 이상 적용)."
+    : "적용 대상: 신축·증축·개축하는 연면적 1,000㎡ 이상의 공공기관 소유 건축물.";
+}
+
+/* ---------- 이벤트 ---------- */
+$("addBtn").onclick  = () => { addRow(null,0); calc(); };
+$("resetBtn").onclick = reset;
+document.addEventListener("input", e => {
+  if(e.target.closest("#rows") || ["area","use","region","year"].includes(e.target.id)) calc();
+});
+reset();
+</script>
+</body>
+</html>

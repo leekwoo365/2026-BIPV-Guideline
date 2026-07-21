@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>에너지성능지표(EPI) 신재생 설비 필요 용량 계산기</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#fff; --ink:#15181d; --muted:#666e7a; --line:#e2e5ea;
+    --accent:#1668c1; --accent-weak:#eaf2fb; --ok:#0f7b46; --ok-weak:#e7f5ee;
+    --bad:#b4232a; --bad-weak:#fdecec; --input:#f0f7ee; --input-line:#7fb069;
+    --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 14px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#14161a; --panel:#1c1f25; --ink:#e8eaee; --muted:#9aa3af; --line:#2e333b;
+      --accent:#5aa2e8; --accent-weak:#1b2c3f; --ok:#4ec98a; --ok-weak:#152a20;
+      --bad:#f0838a; --bad-weak:#2e1a1c; --input:#1e2a1f; --input-line:#4a7a3a;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.2);
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:24px 16px 64px; background:var(--bg); color:var(--ink);
+    font-family:"Pretendard","Malgun Gothic","맑은 고딕",system-ui,-apple-system,sans-serif;
+    font-size:14px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px; margin:0 auto}
+  header{margin-bottom:20px}
+  h1{font-size:22px; margin:0 0 6px; letter-spacing:-.02em}
+  .sub{color:var(--muted); font-size:12.5px; margin:0}
+  .sub b{color:var(--accent); font-weight:600}
+
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:18px; margin-bottom:16px; box-shadow:var(--shadow)}
+  .panel > h2{font-size:13px; margin:0 0 14px; letter-spacing:.02em; color:var(--muted);
+    text-transform:uppercase; font-weight:700; display:flex; align-items:center; gap:8px}
+  .panel > h2::before{content:""; width:3px; height:13px; background:var(--accent); border-radius:2px}
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px}
+  label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:600}
+  input,select{width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:7px;
+    background:var(--panel); color:var(--ink); font-size:14px; font-family:inherit}
+  input:focus,select:focus{outline:2px solid var(--accent); outline-offset:-1px; border-color:transparent}
+  input[type=number]{background:var(--input); border-color:var(--input-line); font-variant-numeric:tabular-nums}
+  .hint{font-size:11px; color:var(--muted); margin-top:4px; font-weight:400}
+
+  .check{display:flex; align-items:flex-start; gap:9px; background:var(--input);
+    border:1px solid var(--input-line); border-radius:7px; padding:10px 11px; cursor:pointer}
+  .check input{width:auto; margin:2px 0 0}
+  .check .t{font-size:12.5px; font-weight:600; color:var(--ink)}
+  .check .d{font-size:11px; color:var(--muted); font-weight:400; margin-top:2px}
+
+  .formula{background:var(--accent-weak); border-radius:7px; padding:12px 14px; font-size:12.5px;
+    color:var(--muted); margin-top:14px; line-height:1.9}
+  .formula code{color:var(--ink); font-weight:600; font-family:inherit}
+  .eq{font-variant-numeric:tabular-nums; color:var(--ink)}
+
+  .steps{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-top:4px}
+  .step{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:13px 14px}
+  .step .k{font-size:11.5px; color:var(--muted); font-weight:600; margin-bottom:6px}
+  .step .v{font-size:19px; font-weight:700; letter-spacing:-.01em; font-variant-numeric:tabular-nums}
+  .step .v small{font-size:12px; color:var(--muted); font-weight:600; margin-left:3px}
+
+  .result{border-radius:10px; padding:18px; background:var(--ok-weak); border:1px solid var(--ok);
+    display:flex; align-items:baseline; gap:12px; flex-wrap:wrap}
+  .result .lbl{font-size:12px; color:var(--muted); font-weight:600}
+  .result .big{font-size:34px; font-weight:700; letter-spacing:-.02em; color:var(--ok); font-variant-numeric:tabular-nums}
+  .result .u{font-size:15px; color:var(--muted); font-weight:600}
+  .result .raw{margin-left:auto; text-align:right; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums}
+  .result .raw b{color:var(--ink); font-size:14px}
+
+  details{margin-top:16px; font-size:12.5px; color:var(--muted)}
+  summary{cursor:pointer; font-weight:600; color:var(--accent); padding:4px 0}
+  details ul{margin:8px 0 0; padding-left:18px; line-height:1.8}
+  details li{margin-bottom:3px}
+  .note{font-size:11.5px; color:var(--muted); margin-top:10px; line-height:1.7}
+  .ctx{background:var(--accent-weak); border-radius:8px; padding:12px 14px; font-size:12.5px; line-height:1.75; color:var(--ink)}
+  .ctx b{color:var(--accent)}
+  .home{display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+    font-size:13px; font-weight:600; color:var(--muted); background:var(--panel);
+    border:1px solid var(--line); border-radius:7px; padding:7px 12px; margin-bottom:16px;
+    box-shadow:var(--shadow); transition:color .15s ease, border-color .15s ease, transform .15s ease}
+  .home:hover{color:var(--accent); border-color:var(--accent)}
+  .home .arrow{transition:transform .15s ease}
+  .home:hover .arrow{transform:translateX(-3px)}
+  @media (max-width:640px){ body{padding:16px 10px 48px} h1{font-size:19px} .panel{padding:14px} .result .raw{margin-left:0; text-align:left; width:100%} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<a class="home" href="index.html"><span class="arrow">←</span> 홈으로</a>
+
+<header>
+  <h1>에너지성능지표(EPI) 신재생 설비 필요 용량 계산기</h1>
+  <p class="sub">건축물 에너지절약 설계기준 · <b>에너지성능지표(EPI) 의무 적용</b> — 신재생에너지 설비 부문 평점 확보용 조명 대응 용량 산정</p>
+</header>
+
+<!-- 기준 안내 -->
+<section class="panel">
+  <h2>적용 기준</h2>
+  <div class="ctx">
+    신재생에너지 설비 부문 <b>평점 4점 이상 획득 필요</b><br>
+    ▶ 전체 조명설비 전력에 대한 신재생에너지 용량 비율 : <b>60% × 2배</b> (의무화 대상은 2배 적용)<br>
+    ▶ 시설연면적 × 단위면적당 조명전력량 × 1.2 = 신재생에너지 설치 필요 용량
+  </div>
+</section>
+
+<!-- 1. 입력 -->
+<section class="panel">
+  <h2>1. 조건 입력</h2>
+  <div class="grid">
+    <div>
+      <label for="area">시설연면적 (㎡)</label>
+      <input type="number" id="area" value="50000" min="0" step="1">
+      <div class="hint">엑셀 예시 3,000㎡ · 이미지 예시 50,000㎡</div>
+    </div>
+    <div>
+      <label for="light">단위면적당 조명전력량 (w/㎡)</label>
+      <input type="number" id="light" value="8" min="0" step="0.1">
+      <div class="hint">기준값 8 w/㎡</div>
+    </div>
+    <div>
+      <label for="ratio">기본 신재생 용량 비율 (%)</label>
+      <input type="number" id="ratio" value="60" min="0" step="1">
+      <div class="hint">전체 조명설비 전력 대비</div>
+    </div>
+    <div>
+      <label>의무화 대상 (2배 적용)</label>
+      <label class="check">
+        <input type="checkbox" id="mandatory" checked>
+        <span><span class="t">의무화 대상 — 2배 적용</span>
+        <span class="d">체크 시 비율 × 2 (60% → 120%)</span></span>
+      </label>
+    </div>
+  </div>
+</section>
+
+<!-- 2. 산정 과정 -->
+<section class="panel">
+  <h2>2. 산정 과정</h2>
+  <div class="formula">
+    설치 필요 용량 = <code>시설연면적</code> × <code>단위면적당 조명전력량</code> × <code>신재생 용량 비율(60%×2)</code>
+    <br><span class="eq" id="eqLine"></span>
+  </div>
+  <div class="steps" style="margin-top:14px">
+    <div class="step">
+      <div class="k">① 전체 조명설비 전력</div>
+      <div class="v" id="totLight">–<small>kW</small></div>
+    </div>
+    <div class="step">
+      <div class="k">② 신재생 용량 비율</div>
+      <div class="v" id="ratioVal">–<small>%</small></div>
+    </div>
+    <div class="step">
+      <div class="k">③ 설치 필요 용량 = ① × ②</div>
+      <div class="v" id="needKw">–<small>kW</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 결과 -->
+<section class="panel">
+  <h2>3. 신재생에너지 설치 필요 용량</h2>
+  <div class="result">
+    <span class="lbl">설치 필요 용량</span>
+    <span class="big" id="resultKw">–</span>
+    <span class="u">kW</span>
+    <span class="raw">
+      원본 산식값 (엑셀 F열)<br><b id="resultW">–</b> W
+    </span>
+  </div>
+
+  <details>
+    <summary>산정 기준 및 주의사항</summary>
+    <ul>
+      <li><b>산식</b> — 시설연면적(㎡) × 단위면적당 조명전력량(w/㎡) × (60% × 2) ÷ 1,000 = 필요 용량(kW)</li>
+      <li><b>이미지 예시 검증</b> — 50,000㎡ × 8w/㎡ × 1.2 = 480,000W = <b>480kW</b></li>
+      <li><b>60% × 2배</b> — 전체 조명설비 전력 대비 신재생 용량 60%가 기본이며, 의무화 대상은 2배(120%)를 적용합니다.</li>
+      <li><b>단위 주의</b> — 원본 엑셀 F열은 결과 단위를 kW로 적어두었으나 실제 계산값(연면적×조명×비율)은 <b>W 단위</b>입니다(÷1,000 누락). 이 계산기는 kW로 환산한 값을 기본 표기하고, 원본 산식값(W)을 우측에 함께 표시합니다.</li>
+      <li>단위면적당 조명전력량·용량 비율은 대상 시설·기준 개정에 따라 달라질 수 있으므로 최신 「건축물 에너지절약 설계기준」을 확인하세요.</li>
+    </ul>
+  </details>
+</section>
+
+<p class="note" style="text-align:center">
+  출처: <b>에너지성능지표 의무적용.xlsx</b> · <b>건축물에너지절약설계기준_EPI 의무적용.png</b> — 2026 BIPV 가이드라인
+</p>
+
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const fmt = (v,d=0) => (!isFinite(v)?"–":v.toLocaleString("ko-KR",{minimumFractionDigits:d,maximumFractionDigits:d}));
+
+function calc(){
+  const area  = parseFloat($("area").value)  || 0;   // ㎡
+  const light = parseFloat($("light").value) || 0;   // w/㎡
+  const base  = parseFloat($("ratio").value) || 0;   // %
+  const mult  = $("mandatory").checked ? 2 : 1;
+
+  const ratioPct = base * mult;            // 신재생 용량 비율 (%)
+  const ratio    = ratioPct / 100;
+
+  const totLightW = area * light;          // 전체 조명설비 전력 (W)
+  const needW     = totLightW * ratio;     // 설치 필요 용량 (W) — 엑셀 F열 원본값
+  const needKw    = needW / 1000;          // kW 환산
+
+  $("eqLine").textContent =
+    `= ${fmt(area)}㎡ × ${fmt(light,light%1?1:0)} w/㎡ × ${fmt(ratio,2)} = ${fmt(needW)} W = ${fmt(needKw,1)} kW`;
+
+  $("totLight").innerHTML = `${fmt(totLightW/1000,1)}<small>kW</small>`;
+  $("ratioVal").innerHTML = `${fmt(ratioPct)}<small>%</small>`;
+  $("needKw").innerHTML   = `${fmt(needKw,1)}<small>kW</small>`;
+
+  $("resultKw").textContent = fmt(needKw,1);
+  $("resultW").textContent  = fmt(needW);
+}
+
+document.addEventListener("input", calc);
+calc();
+</script>
+</body>
+</html>
